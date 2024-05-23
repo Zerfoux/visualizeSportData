@@ -10,7 +10,8 @@ import regex as re
 logging.basicConfig(level=logging.INFO)
 
 #Use main.py functions in app.py
-from main import read_data, clean_data, weight_trend_data, plot_time_trend_run_3k, plot_weight_trend
+from main import read_data, clean_data, weight_trend_data, plot_time_trend_run_3k, multi_plot_weight_trend
+
 
 
 if  __name__ == '__main__':
@@ -35,24 +36,23 @@ if  __name__ == '__main__':
         list_excercises = data['excercise'].unique()
         list_excercises = [excercise for excercise in list_excercises 
                            if excercise not in ['Run', 'Walk', 'Mountain walk','Stretch']]
-        list_excercises = ['Select excercise'] + list_excercises
 
 
-        #create box 
-        excercise = st.selectbox('Select the excercise for which you want to see the weight trend', list_excercises)
-
+        #create a checkbox widget to select the excercise for which the user wants to see the weight trend
+        excercises = st.multiselect('Select the excercise for which you want to see the weight trend', list_excercises)
         #if the user selects an excercise
-        if excercise != 'Select excercise':
-            weight_trend_data = weight_trend_data(data, excercise)
-            st.write('Weight trend data for the excercise', excercise)
+        
+        if len(excercises) > 1:
+            st.plotly_chart(multi_plot_weight_trend(data, excercises))
+
+        elif len(excercises) == 1:
+            weight_trend_data = weight_trend_data(data, excercises[0])
+            st.write('Weight trend data for the excercise', excercises[0])
+            
             #only display the data if the user clicks the button and hide the data if the user clicks the button again
             if st.checkbox('Show data'):
                 st.write(weight_trend_data)
-
             #plot the weight trend for the excercise
-            
-            fig = plot_weight_trend(weight_trend_data, excercise)
-            st.plotly_chart(fig)
-
+            st.plotly_chart(multi_plot_weight_trend(data, excercises))    
 
 

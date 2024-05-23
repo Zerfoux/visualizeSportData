@@ -64,8 +64,8 @@ def plot_time_trend_run_3k(data:pd.DataFrame):
 
 
 # function to get the data for the weight trend of an excercise
-def weight_trend_data(data:pd.DataFrame, excercise: list)->pd.DataFrame:
-    excercise_data = data.loc[data['excercise'] == excercise]
+def weight_trend_data(data:pd.DataFrame, excercise: str)->pd.DataFrame:
+    excercise_data = data.loc[data['excercise'] == str(excercise)]
     excercise_data1  = excercise_data.copy()
     excercise_data = excercise_data.explode('weight')
     #if the data in the weight column is a list create a new row for each value in the list
@@ -95,37 +95,25 @@ def weight_trend_data_list(data:pd.DataFrame, excercise: list)->pd.DataFrame:
         excercise_data[excercise]['reps'] = excercise_data[excercise]['reps'].astype(float)
     return excercise_data
 
-
-def plot_weight_trend(data:pd.DataFrame, excercise: str, show = False )-> list: 
-    excercise_data = weight_trend_data(data, excercise)
-    #plot the data with the x axis spaced per day and the y axis the weight format x axis to only show day and month
-    #Change to the marker color relative to the reps value and the size of the marker relative to the reps value
-    fig = px.scatter(excercise_data, x='date', y='weight', color='reps', size='reps', title='Weight trend for ' + excercise,
-                     labels={'date': 'Date', 'weight': 'Weight (kg)', 'reps': 'Reps'})
-    fig.update_xaxes(tickformat='%b-%d')
-    fig.update_traces(marker=dict(line=dict(width=1, color='DarkSlateGrey')))
-    #show the plot
-    if show == True:
-        fig.show()
-    return fig  
-
-
-def multi_plot_weight_trend(data: pd.DataFrame, excercises: list, show = False) -> list: 
+def multi_plot_weight_trend(data: pd.DataFrame, excercises: list, show = False) -> go.Figure: 
     #make a px.scatter plot for each excercise in the list and add the plot to the list
     fig = go.Figure()
     for excercise in excercises: 
         excercise_data = weight_trend_data(data, excercise)
         #plot the data with the x axis spaced per day and the y axis the weight format x axis to only show day and month
         #Change to the marker color relative to the reps value and the size of the marker relative to the reps value
-        fig.add_trace(go.Scatter(x=excercise_data['date'], y=excercise_data['weight'], mode='markers', name=excercise))
-        fig.update_xaxes(tickformat='%b-%d')
-        fig.update_yaxes(title_text='Weight (kg)')
-        fig.update_xaxes(title_text='Date')
-        fig.update_layout(title='Weight trend for ' + excercise)
+        fig.add_trace(go.Scatter(x=excercise_data['date'], y=excercise_data['weight'],
+                                 marker = dict(size= excercise_data['reps']),
+                                 mode='markers', name=excercise))
+    fig.update_xaxes(tickformat='%b-%d')
+    fig.update_yaxes(title_text='Weight (kg)')
+    fig.update_xaxes(title_text='Date')
+    fig.update_layout(title='Weight trend for ' + excercise)
+    fig1 = fig
     #show the plot
     if show == True:
         fig.show()
-
+    return fig1 
 
 
 #%% read the data and clean the data
@@ -136,7 +124,4 @@ if __name__ == "__main__":
     # plot_weight_trend(data, 'Deadlift',1)
 
     excercises = ['Deadlift', 'Bench press', 'Squat'] 
-    multi_plot_weight_trend(data, excercises, 1)
-
-
-# %%
+    fig = multi_plot_weight_trend(data, excercises, 1)
