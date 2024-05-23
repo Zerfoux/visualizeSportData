@@ -46,22 +46,36 @@ def clean_data(data:pd.DataFrame)->pd.DataFrame:
     for i in range(len(data)):
         for j in range(len(data['reps'][i])):
             data['reps'][i][j] = eval(data['reps'][i][j])
+    #for the columns total_time, distance, speed if one of these columns is NaN replace the value with value calculated from the other columns
+    #for total_time calculate the total time from the speed and distance
+    # for i in range(len(data)):
+    #     if data['total_time'][i] == 'nan':
+    #         if data['distance'][i] != 'nan' and data['speed'][i] != 'nan':
+    #             data['total_time'][i] = str(int(data['distance'][i])/int(data['speed'][i])) 
+    # #for distance calculate the distance from the total time and speed
+    #     elif data['distance'][i] == 'nan':
+    #         if data['total_time'][i] != 'nan' and data['speed'][i] != 'nan':
+    #             data['distance'][i] = str(int(data['total_time'][i])*int(data['speed'][i]))
+    # #for speed calculate the speed from the total time and distance
+    #     elif data['speed'][i] == 'nan':
+    #         if data['total_time'][i] != 'nan' and data['distance'][i] != 'nan':
+    #             data['speed'][i] = str(int(data['distance'][i])/int(data['total_time'][i]))
     return data
 
 # function to plot the time trend of the total time spent on a 3k run 
-def plot_time_trend_run_3k(data:pd.DataFrame):
+def plot_time_run(data:pd.DataFrame, distance = '3')->go.Figure:
     run_data = data.loc[data['excercise'] == 'Run']
-    run_data = run_data.loc[run_data['distance'] == '3']  
+    run_data = run_data.loc[run_data['distance'] == distance]  
     # Convert total time from MM:SS to minutes
     run_data['total_time'] = run_data['total_time'].apply(lambda x: int(x.split(':')[0]) + int(x.split(':')[1])/60)
     # Create the plot
-    fig = px.line(run_data, x='date', y='total_time', title='Total time spent running for 3km',
-                  labels={'date': 'Date', 'total_time': 'Total time (min)'})
-    # Update the x-axis format
+    fig = go.Figure()
+    fig = fig.add_trace(go.Scatter(x=run_data['date'], y=run_data['total_time'],line_shape = 'spline', marker = dict(size=15)))
     fig.update_xaxes(tickformat='%b-%d')
-    return fig
-
-
+    fig.update_yaxes(title_text='Total time (minutes)')
+    fig.update_xaxes(title_text='Date')
+    fig.update_layout(title='Time trend for a ' + distance + 'k run')
+    return fig 
 
 # function to get the data for the weight trend of an excercise
 def weight_trend_data(data:pd.DataFrame, excercise: str)->pd.DataFrame:
@@ -120,8 +134,9 @@ def multi_plot_weight_trend(data: pd.DataFrame, excercises: list, show = False) 
 if __name__ == "__main__":
     data = read_data()
     data = clean_data(data)
-    # plot_time_trend_run_3k(data)
-    # plot_weight_trend(data, 'Deadlift',1)
+
 
     excercises = ['Deadlift', 'Bench press', 'Squat'] 
     fig = multi_plot_weight_trend(data, excercises, 1)
+
+# %%
