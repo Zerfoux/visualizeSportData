@@ -3,12 +3,10 @@ overview of the data and to be able to filter the data based on the exercise typ
 
 #%%
 import pandas as pd
-import matplotlib.pyplot as plt
 import logging
 import regex as re
-import matplotlib.dates as mdates
+import plotly.express as px
 
-plt.style.use('bmh')
 logging.basicConfig(level=logging.INFO)
 
 # %% function to read the data from the xls file
@@ -51,21 +49,16 @@ def clean_data(data:pd.DataFrame)->pd.DataFrame:
 
 # function to plot the time trend of the total time spent on a 3k run 
 def plot_time_trend_run_3k(data:pd.DataFrame):
-    # plot the time needed for the excercise run for 3km
     run_data = data.loc[data['excercise'] == 'Run']
-    run_data = run_data.loc[run_data['distance'] == '3']
-    # plot the data with the x axis spaced per day and the y axis the total time format x axis to only show day and month
-    #Change total time from MM:SS to minutes
+    run_data = run_data.loc[run_data['distance'] == '3']  
+    # Convert total time from MM:SS to minutes
     run_data['total_time'] = run_data['total_time'].apply(lambda x: int(x.split(':')[0]) + int(x.split(':')[1])/60)
-    fig, ax = plt.subplots()
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%b-%d'))
-    plt.plot(run_data['date'], run_data['total_time'], 'r-')
-    plt.xlabel('Date')
-    plt.ylabel('Total time (min)')
-    plt.title('Total time spent running for 3km')
-    plt.xticks(rotation=45)
-    plt.show()
-    return fig, ax
+    # Create the plot
+    fig = px.line(run_data, x='date', y='total_time', title='Total time spent running for 3km',
+                  labels={'date': 'Date', 'total_time': 'Total time (min)'})
+    # Update the x-axis format
+    fig.update_xaxes(tickformat='%b-%d')
+    return fig
 
 
 
@@ -82,26 +75,20 @@ def weight_trend_data(data:pd.DataFrame, excercise: str)->pd.DataFrame:
     excercise_data['weight'] = excercise_data['weight'].astype(float)
     #change the data in the reps column from a string to a float
     excercise_data['reps'] = excercise_data['reps'].astype(float)
-
     return excercise_data
 
 def plot_weight_trend(data:pd.DataFrame, excercise: str, show = False )-> list: 
     excercise_data = weight_trend_data(data, excercise)
     #plot the data with the x axis spaced per day and the y axis the weight format x axis to only show day and month
     #Change to the marker color relative to the reps value and the size of the marker relative to the reps value
-    fig, ax = plt.subplots()
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%b-%d'))
-    plt.scatter(excercise_data['date'], excercise_data['weight'],
-                 s=excercise_data['reps']*10, c=excercise_data['reps'], 
-                 cmap='rainbow', alpha=0.5)
-    plt.xlabel('Date')
-    plt.ylabel('Weight (kg)')
-    plt.colorbar(label='Reps')
-    plt.title(f'Weight trend of the excercise {excercise}')
-    plt.xticks(rotation=45)
+    fig = px.scatter(excercise_data, x='date', y='weight', color='reps', size='reps', title='Weight trend for ' + excercise,
+                     labels={'date': 'Date', 'weight': 'Weight (kg)', 'reps': 'Reps'})
+    fig.update_xaxes(tickformat='%b-%d')
+    fig.update_traces(marker=dict(line=dict(width=1, color='DarkSlateGrey')))
+    #show the plot
     if show == True:
-        plt.show()
-    return fig, ax 
+        fig.show()
+    return fig  
 
 
 #%% read the data and clean the data

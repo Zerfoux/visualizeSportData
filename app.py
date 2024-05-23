@@ -26,8 +26,8 @@ if  __name__ == '__main__':
     with col1:
         #Create a widget to display the time trend for the excercise 'Run' for 3km
         st.header('Time trend for the excercise Run for 3km')
-        fig1 , ax1  = plot_time_trend_run_3k(data)
-        st.pyplot(fig1)
+        st.plotly_chart(plot_time_trend_run_3k(data)) 
+        
 
     with col2:
         #Create a widget to display the weight trend for the excercise which the user inputs
@@ -50,8 +50,8 @@ if  __name__ == '__main__':
                 st.write(weight_trend_data)
 
             #plot the weight trend for the excercise
-            fig , ax = plot_weight_trend(weight_trend_data, excercise)
-            st.pyplot(fig)
+            fig = plot_weight_trend(weight_trend_data, excercise)
+            st.plotly_chart(fig)
 
 
 
