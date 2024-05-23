@@ -50,6 +50,7 @@ if  __name__ == '__main__':
                 st.write(weight_trend_data)
 
             #plot the weight trend for the excercise
+            
             fig = plot_weight_trend(weight_trend_data, excercise)
             st.plotly_chart(fig)
 

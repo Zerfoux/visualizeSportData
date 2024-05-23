@@ -6,6 +6,7 @@ import pandas as pd
 import logging
 import regex as re
 import plotly.express as px
+import plotly.graph_objects as go
 
 logging.basicConfig(level=logging.INFO)
 
@@ -63,7 +64,7 @@ def plot_time_trend_run_3k(data:pd.DataFrame):
 
 
 # function to get the data for the weight trend of an excercise
-def weight_trend_data(data:pd.DataFrame, excercise: str)->pd.DataFrame:
+def weight_trend_data(data:pd.DataFrame, excercise: list)->pd.DataFrame:
     excercise_data = data.loc[data['excercise'] == excercise]
     excercise_data1  = excercise_data.copy()
     excercise_data = excercise_data.explode('weight')
@@ -76,6 +77,24 @@ def weight_trend_data(data:pd.DataFrame, excercise: str)->pd.DataFrame:
     #change the data in the reps column from a string to a float
     excercise_data['reps'] = excercise_data['reps'].astype(float)
     return excercise_data
+
+def weight_trend_data_list(data:pd.DataFrame, excercise: list)->pd.DataFrame:
+    excercise_data = {}
+    excercise_data1 = {}
+    for excercise in excercise:
+        excercise_data[excercise] = data.loc[data['excercise'] == excercise]
+        excercise_data1[excercise]  = excercise_data[excercise].copy()
+        excercise_data[excercise] = excercise_data[excercise].explode('weight')
+        #if the data in the weight column is a list create a new row for each value in the list
+        weight_explode = excercise_data1[excercise].explode('weight')['weight']
+        reps_explode = excercise_data1[excercise].explode('reps')['reps']
+        excercise_data[excercise]['reps'] = reps_explode
+        #change the data in the weight column from a string to a float
+        excercise_data[excercise]['weight'] = excercise_data[excercise]['weight'].astype(float)
+        #change the data in the reps column from a string to a float
+        excercise_data[excercise]['reps'] = excercise_data[excercise]['reps'].astype(float)
+    return excercise_data
+
 
 def plot_weight_trend(data:pd.DataFrame, excercise: str, show = False )-> list: 
     excercise_data = weight_trend_data(data, excercise)
@@ -91,12 +110,33 @@ def plot_weight_trend(data:pd.DataFrame, excercise: str, show = False )-> list:
     return fig  
 
 
+def multi_plot_weight_trend(data: pd.DataFrame, excercises: list, show = False) -> list: 
+    #make a px.scatter plot for each excercise in the list and add the plot to the list
+    fig = go.Figure()
+    for excercise in excercises: 
+        excercise_data = weight_trend_data(data, excercise)
+        #plot the data with the x axis spaced per day and the y axis the weight format x axis to only show day and month
+        #Change to the marker color relative to the reps value and the size of the marker relative to the reps value
+        fig.add_trace(go.Scatter(x=excercise_data['date'], y=excercise_data['weight'], mode='markers', name=excercise))
+        fig.update_xaxes(tickformat='%b-%d')
+        fig.update_yaxes(title_text='Weight (kg)')
+        fig.update_xaxes(title_text='Date')
+        fig.update_layout(title='Weight trend for ' + excercise)
+    #show the plot
+    if show == True:
+        fig.show()
+
+
+
 #%% read the data and clean the data
 if __name__ == "__main__":
     data = read_data()
     data = clean_data(data)
-    plot_time_trend_run_3k(data)
-    plot_weight_trend(data, 'Deadlift',1)
+    # plot_time_trend_run_3k(data)
+    # plot_weight_trend(data, 'Deadlift',1)
+
+    excercises = ['Deadlift', 'Bench press', 'Squat'] 
+    multi_plot_weight_trend(data, excercises, 1)
 
 
 # %%
