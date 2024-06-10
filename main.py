@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO)
 # %% function to read the data from the xls file
 def read_data()->pd.DataFrame:
     '''Reads the data from the xls file and returns the data in a pandas dataframe, change the column names'''
-    data = pd.read_excel(r'C:\Users\User\Documents\personal\Version2\Data.xlsx', sheet_name='Sports',dtype=str)
+    data = pd.read_excel(r"C:\Users\User\Documents\Version2\Data.xlsx", sheet_name='Sports',dtype=str)
     columns = ['group', 'training_time', 'date', 'excercise', 
                'variation', 'weight', 'reps', 'total_time', 
                'distance','speed','slope','notes']
@@ -50,10 +50,10 @@ def clean_data(data:pd.DataFrame)->pd.DataFrame:
     return data
 
 # function to plot the time trend of the total time spent on a 3k run 
-def plot_time_trend_run_3k(data:pd.DataFrame):
+def plot_time_trend_run(data:pd.DataFrame, distance:str = 3)->list:
     # plot the time needed for the excercise run for 3km
     run_data = data.loc[data['excercise'] == 'Run']
-    run_data = run_data.loc[run_data['distance'] == '3']
+    run_data = run_data.loc[run_data['distance'] == distance]
     # plot the data with the x axis spaced per day and the y axis the total time format x axis to only show day and month
     #Change total time from MM:SS to minutes
     run_data['total_time'] = run_data['total_time'].apply(lambda x: int(x.split(':')[0]) + int(x.split(':')[1])/60)
@@ -110,6 +110,7 @@ if __name__ == "__main__":
     data = clean_data(data)
     plot_time_trend_run_3k(data)
     plot_weight_trend(data, 'Deadlift',1)
-
+    
+  
 
 # %%

@@ -10,7 +10,7 @@ import regex as re
 logging.basicConfig(level=logging.INFO)
 
 #Use main.py functions in app.py
-from main import read_data, clean_data, weight_trend_data, plot_time_trend_run_3k, plot_weight_trend
+from main import read_data, clean_data, weight_trend_data, plot_time_trend_run, plot_weight_trend
 
 
 if  __name__ == '__main__':
@@ -26,7 +26,7 @@ if  __name__ == '__main__':
     with col1:
         #Create a widget to display the time trend for the excercise 'Run' for 3km
         st.header('Time trend for the excercise Run for 3km')
-        fig1 , ax1  = plot_time_trend_run_3k(data)
+        fig1 , ax1  = plot_time_trend_run(data,'3')
         st.pyplot(fig1)
 
     with col2:
