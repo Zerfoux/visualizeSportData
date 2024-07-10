@@ -71,6 +71,18 @@ def plot_time_trend_run(data:pd.DataFrame, distance:str = 3)->list:
 
 # function to get the data for the weight trend of an excercise
 def weight_trend_data(data:pd.DataFrame, excercise: str)->pd.DataFrame:
+    '''returns the data for the weight trend of the excercise'''
+    #check if the list of weight values is the same length as the list of reps values
+    if len(data.loc[data['excercise'] == excercise].explode('weight')['weight']) != \
+        len(data.loc[data['excercise'] == excercise].explode('reps')['reps']):
+        logging.error('The length of the weight list is not the same as the length of the reps list')
+        #find the date where the length of the weight list is not the same as the length of the reps list
+        for i in range(len(data.loc[data['excercise'] == excercise])):
+            if len(data.loc[data['excercise'] == excercise].iloc[i]['weight']) != \
+                len(data.loc[data['excercise'] == excercise].iloc[i]['reps']):
+                logging.error(f'The error is at index {i} on date {data.loc[data["excercise"] == excercise].iloc[i]["date"]}')
+        raise ValueError('The length of the weight list is not the same as the length of the reps list')
+
     excercise_data = data.loc[data['excercise'] == excercise]
     excercise_data1  = excercise_data.copy()
     excercise_data = excercise_data.explode('weight')
@@ -103,14 +115,48 @@ def plot_weight_trend(data:pd.DataFrame, excercise: str, show = False )-> list:
         plt.show()
     return fig, ax 
 
+def unique_excercise_data(data:pd.DataFrame)->pd.DataFrame:
+    #new data frame containing all the data for the unique excercises
+    unique_excercises = data['excercise'].unique()
+    unique_excercises = [excercise for excercise in unique_excercises if excercise not in ['Run', 'Walk', 'Mountain walk','Stretch']]
+    unique_excercise_data = pd.DataFrame()
+    unique_excercise_data['excercise'] = unique_excercises
+
+    #count the number of times each excercise is done 
+    for excercise in unique_excercises:
+        unique_excercise_data.loc[unique_excercise_data['excercise'] == excercise, 'count'] \
+            = len(data.loc[data['excercise'] == excercise])
+
+    #for each excercise add the max weight 
+    for excercise in unique_excercises:
+        try: 
+            excercise_data = weight_trend_data(data, excercise)
+            max_weight = excercise_data['weight'].max()
+            unique_excercise_data.loc[unique_excercise_data['excercise'] == excercise, 'max_weight'] = max_weight
+            unique_excercise_data.loc[unique_excercise_data['excercise'] == excercise, 'max_weight_reps'] = \
+                excercise_data.loc[excercise_data['weight'] == max_weight, 'reps'].values[0]
+        except:
+            pass
+
+    return unique_excercise_data
+
+def unique_running_data(data: pd.DataFrame) -> pd.DataFrame:
+    '''returns the unique running data for the excercise run'''
+    running_data = data.loc[data['excercise'] == 'Run']
+    unique_running_data = pd.DataFrame()
+    unique_running_data['distance'] = running_data['distance'].unique()
+    unique_running_data['count'] = unique_running_data['distance'].apply(lambda x: len(running_data.loc[running_data['distance'] == x]))
+    unique_running_data['Fastest time'] = unique_running_data['distance'].apply(lambda x: running_data.loc[running_data['distance'] == x, 'total_time'].min())
+    for distance in unique_running_data['distance']:
+        unique_running_data[str(distance), 'Fastest time'] = running_data.loc[str(distance), 'total_time']/ \
+            running_data.loc[str(distance), 'distance'] 
+    return unique_running_data
 
 #%% read the data and clean the data
 if __name__ == "__main__":
     data = read_data()
     data = clean_data(data)
-    plot_time_trend_run_3k(data)
-    plot_weight_trend(data, 'Deadlift',1)
-    
-  
+    unique_excercise_data = unique_excercise_data(data)
+
 
 # %%

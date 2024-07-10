@@ -10,15 +10,16 @@ import regex as re
 logging.basicConfig(level=logging.INFO)
 
 #Use main.py functions in app.py
-from main import read_data, clean_data, weight_trend_data, plot_time_trend_run, plot_weight_trend, unique_excercise_data
+#from main import read_data, clean_data, weight_trend_data, plot_time_trend_run, plot_weight_trend, unique_excercise_data
 
+from main_1 import DataLoader, ExerciseAnalysis
 
 if  __name__ == '__main__':
 
     #read the data
-    data = read_data()
+    data = DataLoader.read_data()
     #clean the data
-    data = clean_data(data)
+    data = DataLoader.clean_data(data)
     #Create a widget to display the weight trend for the excercise which the user inputs
     st.title('Sports data visualisation')    
 
@@ -34,12 +35,12 @@ if  __name__ == '__main__':
         distances= st.multiselect('Select the length of the run', data['distance'].unique(), default = ['3']) 
         if type(distances) == str:
             #plot the time trend for the excercise 'Run' for the distance selected by the user
-            fig1 , ax1  = plot_time_trend_run(data,distances)
+            fig1 , ax1  = ExerciseAnalysis.plot_time_trend_run(data,distances)
             st.pyplot(fig1)
         else:
             for distance in distances:
                 #plot the time trend for the excercise 'Run' for the distance selected by the user
-                fig1 , ax1  = plot_time_trend_run(data,distance)
+                fig1 , ax1  = ExerciseAnalysis.plot_time_trend_run(data,distance)
                 ax1.set_title(f'Time trend for the excercise Run for {distance} km')
                 st.pyplot(fig1)
     
@@ -52,7 +53,7 @@ if  __name__ == '__main__':
 
         #table with the groups and the excercises in the data
         st.write('Groups and excercises in the data')
-        unique_excercises = unique_excercise_data(data)
+        unique_excercises = ExerciseAnalysis.unique_excercise_data(data)
         st.write(unique_excercises)
 
         #Create a widget to display the weight trend for the excercise which the user inputs
@@ -68,14 +69,14 @@ if  __name__ == '__main__':
 
         #if the user selects an excercise
         if excercise != 'Select excercise':
-            weight_trend_data = weight_trend_data(data, excercise)
+            weight_trend_data = ExerciseAnalysis.weight_trend_data(data, excercise)
             st.write('Weight trend data for the excercise', excercise)
             #only display the data if the user clicks the button and hide the data if the user clicks the button again
             if st.checkbox('Show data'):
                 st.write(weight_trend_data)
 
             #plot the weight trend for the excercise
-            fig , ax = plot_weight_trend(weight_trend_data, excercise)
+            fig , ax = ExerciseAnalysis.plot_weight_trend(weight_trend_data, excercise)
             st.pyplot(fig)
 
 
