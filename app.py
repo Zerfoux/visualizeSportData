@@ -67,7 +67,7 @@ if  __name__ == '__main__':
 
         #table with the groups and the exercises in the data
         st.header('Exercise analysis')
-        if  st.button('Click to see the groups and exercises in the data'): 
+        if  st.checkbox('Show data for unique exercise'): 
             unique_exercises = exercise_analysis.unique_exercise_data()
             st.write(unique_exercises)
 
@@ -87,7 +87,7 @@ if  __name__ == '__main__':
             _weight_trend_data = exercise_analysis.weight_trend_data(exercise)
             st.write('Weight trend data for the exercise', exercise)
             #only display the data if the user clicks the button and hide the data if the user clicks the button again
-            if st.checkbox('Show data'):
+            if st.checkbox('Show data for weight trend'):
                 st.write(_weight_trend_data)
 
             #plot the weight trend for the exercise
