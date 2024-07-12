@@ -1,13 +1,29 @@
+""" This script is used to analyze the sports data of a person. 
+    The data is stored in an Excel file and contains the following columns:
+    - group: the group to which the exercise belongs
+    - training_time: the time spent on the exercise
+    - date: the date of the exercise
+    - exercise: the type of exercise
+    - variation: the variation of the exercise
+    - weight: the weight used for the exercise
+    - reps: the number of repetitions
+    - total_time: the total time spent on the exercise
+    - distance: the distance covered
+    - speed: the speed
+    - slope: the slope
+    - notes: additional notes
+    
+    The script provides three classes: DataLoader, ExerciseAnalysis, and RunAnalysis. 
+    DataLoader is used to load and clean the data, while ExerciseAnalysis is used to analyze the exercise data.
+    """
 #%%
 import pandas as pd
 import matplotlib.pyplot as plt
 import logging
 import matplotlib.dates as mdates
-from typing import Tuple, List
+from typing import Tuple, List, Union
 
 
-
-plt.style.use('bmh')
 logging.basicConfig(level=logging.INFO)
 
 class DataLoader:
@@ -21,7 +37,9 @@ class DataLoader:
 
     def read_data(self) -> pd.DataFrame:
         data = pd.read_excel('data.xlsx', sheet_name=self.sheet_name, dtype=str)
-        columns = ['group', 'training_time', 'date', 'exercise', 'variation', 'weight', 'reps', 'total_time', 'distance', 'speed', 'slope', 'notes']
+        columns = ['group', 'training_time', 'date', 'exercise', \
+                   'variation', 'weight', 'reps', 'total_time', \
+                    'distance', 'speed', 'slope', 'notes']
         data.columns = columns
         return data
 
@@ -48,8 +66,6 @@ class DataLoader:
         return data
 
     
-
-
 class ExerciseAnalysis:
     def __init__(self, data: pd.DataFrame) -> None:
         self.data = data
@@ -64,20 +80,27 @@ class ExerciseAnalysis:
         exercise_data['reps'] = exercise_data['reps'].astype(float)
         return exercise_data
 
-    def plot_weight_trend(self, exercise: str, show: bool = False) -> Tuple[plt.Figure, plt.Axes]:
-        exercise_data = self.weight_trend_data(exercise)
-        fig, ax = plt.subplots()
-        ax.xaxis.set_major_formatter(mdates.DateFormatter('%b-%d'))
-        ax.scatter(exercise_data['date'], exercise_data['weight'], s=exercise_data['reps']*10, c=exercise_data['reps'], cmap='rainbow', alpha=0.5)
-        ax.set_xlabel('Date')
-        ax.set_ylabel('Weight (kg)')
-        colorbar = plt.colorbar(ax.collections[0])
-        colorbar.set_label('Reps')
-        ax.set_title(f'Weight trend of the exercise {exercise}')
-        ax.set_xticklabels(ax.get_xticks(), rotation=45)
-        if show:
-            plt.show()
-        return fig, ax
+    def total_weight_lifted_last_5(self) -> pd.DataFrame:
+        total_weight_lifted = pd.DataFrame()
+        total_weight_lifted['exercise'] = self.data['exercise'].unique()
+        for exercise in self.data['exercise'].unique():
+            exercise_data = self.weight_trend_data(exercise)
+            total_weight_lifted.loc[total_weight_lifted['exercise'] == exercise, 'total_weight_lifted'] = \
+                (exercise_data['weight'] * exercise_data['reps']).tail(5).sum()
+        return total_weight_lifted
+    
+    def total_weight_lifted_preceding_5(self) -> pd.DataFrame:
+        total_weight_lifted = pd.DataFrame()
+        total_weight_lifted['exercise'] = self.data['exercise'].unique()
+        for exercise in self.data['exercise'].unique():
+            exercise_data = self.weight_trend_data(exercise)
+            total_weight_lifted.loc[total_weight_lifted['exercise'] == exercise, 'total_weight_lifted'] = \
+                (exercise_data['weight'] * exercise_data['reps']).tail(10).sum()
+            total_weight_lifted.loc[total_weight_lifted['exercise'] == exercise, 'total_weight_lifted'] = \
+                total_weight_lifted.loc[total_weight_lifted['exercise'] == exercise, 'total_weight_lifted'].values[0] - \
+                self.total_weight_lifted_last_5().loc[self.total_weight_lifted_last_5()['exercise'] == exercise, 'total_weight_lifted'].values[0]
+        return total_weight_lifted
+    
 
     def unique_exercise_data(self) -> pd.DataFrame:
         unique_exercises = self.data['exercise'].unique()
@@ -98,9 +121,80 @@ class ExerciseAnalysis:
                       exercise_data.loc[exercise_data['weight'] == max_weight, 'reps'].values[0]
             except:
                 pass
+        
+        # Average weight column 
+        for exercise in unique_exercises:
+            exercise_data = self.weight_trend_data(exercise)
+            unique_exercise_data.loc[unique_exercise_data['exercise'] == exercise, 'average_weight'] = \
+                exercise_data['weight'].mean()
+            
+        # Average weight last 5 runs
+        for exercise in unique_exercises:
+            exercise_data = self.weight_trend_data(exercise)
+            unique_exercise_data.loc[unique_exercise_data['exercise'] == exercise, 'average_weight_last_5_runs'] = \
+                exercise_data['weight'].tail(5).mean()
+            
+        # growth percentage of the total weight lifted in the last 5 runs compared to the preceding 5 runs
+        total_weight_lifted_last_5 = self.total_weight_lifted_last_5()
+        total_weight_lifted_preceding_5 = self.total_weight_lifted_preceding_5()
+        unique_exercise_data['growth_percentage'] = \
+            (total_weight_lifted_last_5['total_weight_lifted']) / \
+            total_weight_lifted_preceding_5['total_weight_lifted'] * 100
 
+            
+        unique_exercise_data.rename(columns={'exercise': 'Exercise', 'count': 'Count', 'max_weight': 'Max Weight', \
+                                             'max_weight_reps': 'Max Weight Reps', 'average_weight': 'Average Weight', \
+                                             'average_weight_last_5_runs': 'Average Weight Last 5 Runs','growth_percentage': 'Growth Percentage'}, inplace=True)
         return unique_exercise_data
 
+    def group_exercise_data(self) -> pd.DataFrame:
+        self.data['group'] = self.data['group'].fillna('No group')
+        group_exercise_data = pd.DataFrame()
+        # Find the unique groups in the data by splicing and exploding the 'group' column
+        unique_groups = self.data['group'].str.split('+').explode()
+        unique_groups = unique_groups.str.strip().unique()
+
+
+        group_exercise_data['group'] = unique_groups
+        for group in unique_groups:
+            group_data = self.data.loc[self.data['group'] == group]
+            group_exercise_data.loc[group_exercise_data['group'] == group, 'count'] = len(group_data)
+            group_exercise_data.loc[group_exercise_data['group'] == group, 'average_weight'] = \
+                group_data['weight'].apply(lambda x: sum(x) / len(x)).mean()
+            group_exercise_data.loc[group_exercise_data['group'] == group, 'average_weight_last_5'] = \
+                group_data['weight'].apply(lambda x: sum(x) / len(x)).tail(5).mean()
+            group_exercise_data.loc[group_exercise_data['group'] == group, 'growth_percentage'] = \
+                (group_exercise_data.loc[group_exercise_data['group'] == group, 'average_weight_last_5'].values[0] / \
+                    group_exercise_data.loc[group_exercise_data['group'] == group, 'average_weight'].values[0]) * 100
+            
+        # Round the growth percentage to 2 decimal places
+        group_exercise_data['growth_percentage'] = group_exercise_data['growth_percentage'].round(2)
+
+        # Rename the columns
+        group_exercise_data.rename(columns={'group': 'Group', 'count': 'Count', 'average_weight': 'Average Weight', \
+                                            'average_weight_last_5': 'Average Weight Last 5', 'growth_percentage': 'Growth Percentage'}, inplace=True)
+        
+        return group_exercise_data
+    
+    
+    def plot_weight_trend(self, exercise: str) -> Tuple[plt.Figure, plt.Axes]:
+        exercise_data = self.weight_trend_data(exercise)
+        fig, ax = plt.subplots()
+        ax.scatter(exercise_data['date'], exercise_data['weight'], s=exercise_data['reps']*10, \
+                   c=exercise_data['reps'], cmap='rainbow', alpha=0.5)
+        ax.set_xlabel('Date')
+        ax.set_ylabel('Weight (kg)')
+        colorbar = plt.colorbar(ax.collections[0])
+        colorbar.set_label('Reps')
+        ax.set_title(f'Weight trend of the exercise {exercise}')
+
+        # Set the x-ticks and x-tick labels with a rotation
+        xticks = ax.get_xticks()
+        ax.set_xticks(xticks)  # Explicitly set the x-ticks to match the labels
+        ax.set_xticklabels(ax.get_xticks(), rotation=45)  # Now set the labels with rotation
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%b-%d'))
+        return fig, ax
+        
 class RunAnalysis:
     def __init__(self, data: pd.DataFrame) -> None:
         self.data = data
@@ -115,29 +209,33 @@ class RunAnalysis:
         if 'total_time_delta' not in running_data.columns:
             running_data['total_time_delta'] = pd.Series(dtype='timedelta64[ns]')       
         running_data.loc[:, 'total_time_delta'] = running_data['total_time'].apply(
-            lambda x: int(x.split(':')[0]) * 60 + int(x.split(':')[1]) if x != 'nan' else 0
+            lambda x: int(x.split(':')[0]) * 60 + int(x.split(':')[1]) if pd.notnull(x) else 0
         )
-        # Ensure 'total_time_delta' column is of type 'timedelta64[ns]' before assignment
-        running_data.loc[:, 'total_time_delta'] = pd.to_timedelta(running_data['total_time_delta'], unit='s')
-            # Calculate speed and distance based on available data
+
+        # Convert 'total_time_delta' to a timedelta object
+        running_data['total_time_delta'] = pd.to_timedelta(running_data['total_time_delta'], unit='s')
+
+
+        # Calculate speed and distance based on available data
         for k, v in running_data.loc[:, ['date', 'total_time_delta', 'distance', 'speed']].iterrows():
             if v['total_time_delta'] != pd.Timedelta(seconds=0) and pd.notnull(v['distance']):
-                running_data.loc[k, 'speed'] = float(v['distance']) / (float(v['total_time_delta'].seconds) / 3600)
+                running_data.loc[k, 'speed'] = float(v['distance']) / (float(v['total_time_delta'].total_seconds()) / 3600)
             elif v['total_time_delta'] != pd.Timedelta(seconds=0) and pd.notnull(v['speed']):
                 pass # speed is already calculated
             #     # Ensure 'v['speed']' is treated as a float
             #     speed_as_float = float(v['speed'])
             #     running_data.loc[k, 'distance'] = speed_as_float * (v['total_time_delta'].seconds / 3600)   
             elif pd.notnull(v['distance']) and pd.notnull(v['speed']):
-                running_data.loc[k, 'total_time_delta'] = pd.Timedelta(seconds=(v['distance'] / v['speed']) * 3600)
+                running_data.loc[k, 'total_time_delta'] = pd.to_timedelta(seconds=(v['distance'] / v['speed']) * 3600, unit='s')
             else:
                 logging.warning(f"Row {k} has missing values for 'total_time_delta', 'distance', and 'speed'")
 
-            # Calculate pace for each row
-            total_seconds = running_data['total_time_delta'].dt.total_seconds()
-            running_data['distance_float'] = running_data['distance'].astype(float)
-            valid_times = total_seconds != 0
-            running_data.loc[valid_times, 'pace'] = (total_seconds[valid_times] / 60) / running_data.loc[valid_times, 'distance_float']
+        # Calculate pace for each row
+        total_seconds = running_data['total_time_delta'].dt.total_seconds()
+        running_data['distance_float'] = running_data['distance'].astype(float)
+        valid_times = total_seconds != 0
+        running_data.loc[valid_times, 'pace'] = \
+            (total_seconds[valid_times] / 60) / running_data.loc[valid_times, 'distance_float']
         return running_data
 
     def unique_running_data(self) -> pd.DataFrame:
@@ -153,33 +251,67 @@ class RunAnalysis:
         for distance in unique_running_data['distance'] :
                 unique_running_data.loc[unique_running_data['distance'] == distance, 'min_pace'] = \
                     running_data.loc[running_data['distance'] == distance, 'pace'].min()
+                # Add average pace
+                unique_running_data.loc[unique_running_data['distance'] == distance, 'average_pace'] = \
+                    running_data.loc[running_data['distance'] == distance, 'pace'].mean()
+                # Add average pace last 5 runs
+                unique_running_data.loc[unique_running_data['distance'] == distance, 'average_pace_last_5_runs'] = \
+                    running_data.loc[running_data['distance'] == distance, 'pace'].tail(5).mean()
+                # Percentage change in average pace
+                unique_running_data.loc[unique_running_data['distance'] == distance, 'percentage_change'] = \
+                    (unique_running_data.loc[unique_running_data['distance'] == distance, 'average_pace'].values[0] / \
+                    unique_running_data.loc[unique_running_data['distance'] == distance, 'average_pace_last_5_runs'].values[0]) * 100
+                
+        # Round percentage change to 2 decimal places
+        unique_running_data['percentage_change'] = unique_running_data['percentage_change'].round(2)
+
+
+
+        # Convert pace from seconds to mm:ss
+        def pace_seconds_to_mm_ss(column_name: str) -> None:
+            unique_running_data[column_name] = unique_running_data[column_name].apply(
+            lambda x: f"{int(x)}:{int((x - int(x)) * 60):02d}"
+            ) 
+        # Min pace format to mm:ss
+        pace_seconds_to_mm_ss('min_pace')
+        # Average pace format to mm:ss
+        pace_seconds_to_mm_ss('average_pace')
+        # Average pace last 5 runs format to mm:ss
+        pace_seconds_to_mm_ss('average_pace_last_5_runs')
+
+        unique_running_data.rename(columns={'distance': 'Distance (km)', 'count': 'Count', 'min_pace': 'Min Pace', \
+                                            'average_pace': 'Average Pace', 'average_pace_last_5_runs': 'Average Pace last 5 runs'}, inplace=True)
         return unique_running_data
-  
-    def plot_pace_trend(self, distance: str = '3') -> Tuple[plt.Figure, plt.Axes]:
+
+    def plot_pace_trend(self, distance: Union[str, List[str]] = '3') -> Tuple[plt.Figure, plt.Axes]:
+        if isinstance(distance, str):
+            distance = [distance]
         run_data = self.running_data()
-        run_data = run_data.loc[run_data['distance'] == distance]
+        run_data = run_data.loc[run_data['distance'].isin(distance)]
         fig, ax = plt.subplots()
         ax.xaxis.set_major_formatter(mdates.DateFormatter('%b-%d'))
-        ax.plot(run_data['date'], run_data['pace'], 'r-', marker='o')
+        for d in distance:
+            ax.plot(run_data.loc[run_data['distance'] == d, 'date'], run_data.loc[
+                run_data['distance'] == d, 'pace'], '-', marker='o', label=f'{d} km')
         ax.set_xlabel('Date')
-        ax.set_ylabel('Total time (min)')
-        ax.set_title('Total time spent running for 3km')
+        ax.set_ylabel('Pace (min per km)')
+        ax.set_title(f'Pace trend for different distances')
         ax.tick_params(axis='x', rotation=45)
+        ax.legend()
         return fig, ax
 
 #%%
 if __name__ == "__main__":
     # Load and clean the data
     loader = DataLoader('Sports')
-    # loader.update_data(r"C:\Users\User\Documents\Version2\Data.xlsx", 'Sports')
-
+    loader.update_data(r"C:\Users\User\Documents\Version2\Data.xlsx", 'Sports')
     data = loader.read_data()
     cleaned_data = loader.clean_data(data)
 
-    # Perform run analysis
-    run_analysis = RunAnalysis(cleaned_data)
-    unique_running_data = run_analysis.unique_running_data()
-    print(unique_running_data)   
+    # Group data|
+    exercise_analysis = ExerciseAnalysis(cleaned_data)
+    group_exercise_data = exercise_analysis.group_exercise_data()
+    print(group_exercise_data)
 
 
 # %%
