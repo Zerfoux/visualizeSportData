@@ -12,14 +12,14 @@ logging.basicConfig(level=logging.INFO)
 #Use main.py functions in app.py
 #from main import read_data, clean_data, weight_trend_data, plot_time_trend_run, plot_weight_trend, unique_excercise_data
 
-from main_1 import DataLoader, ExerciseAnalysis
+from main import DataLoader, ExerciseAnalysis
 
 if  __name__ == '__main__':
 
-    #read the data
-    data = DataLoader.read_data()
-    #clean the data
-    data = DataLoader.clean_data(data)
+    # Load and clean the data
+    loader = DataLoader(r"C:\Users\User\Documents\Version2\Data.xlsx", 'Sports')
+    data = loader.read_data()
+    cleaned_data = loader.clean_data(data)
     #Create a widget to display the weight trend for the excercise which the user inputs
     st.title('Sports data visualisation')    
 
@@ -35,7 +35,7 @@ if  __name__ == '__main__':
         distances= st.multiselect('Select the length of the run', data['distance'].unique(), default = ['3']) 
         if type(distances) == str:
             #plot the time trend for the excercise 'Run' for the distance selected by the user
-            fig1 , ax1  = ExerciseAnalysis.plot_time_trend_run(data,distances)
+            fig1 , ax1  = ExerciseAnalysis.plot_time_trend_run(distances)
             st.pyplot(fig1)
         else:
             for distance in distances:

@@ -1,162 +1,185 @@
-"""programm to create and interactive dashboard to visualize data from sporting data to get a clear
-overview of the data and to be able to filter the data based on the exercise type and the date"""
-
 #%%
 import pandas as pd
 import matplotlib.pyplot as plt
 import logging
-import regex as re
 import matplotlib.dates as mdates
+from typing import Tuple, List
+
+
 
 plt.style.use('bmh')
 logging.basicConfig(level=logging.INFO)
 
-# %% function to read the data from the xls file
-def read_data()->pd.DataFrame:
-    '''Reads the data from the xls file and returns the data in a pandas dataframe, change the column names'''
-    data = pd.read_excel(r"C:\Users\User\Documents\Version2\Data.xlsx", sheet_name='Sports',dtype=str)
-    columns = ['group', 'training_time', 'date', 'excercise', 
-               'variation', 'weight', 'reps', 'total_time', 
-               'distance','speed','slope','notes']
-    data.columns = columns
-    return data
+class DataLoader:
+    def __init__(self, file_path: str, sheet_name: str) -> None:
+        self.file_path = file_path
+        self.sheet_name = sheet_name
 
-# function to clean the data 
-def clean_data(data:pd.DataFrame)->pd.DataFrame:
-    '''for the first column 'group' fill the missing values with the previous value, ...
-    for the second column replace NaN with string '1:00', ...
-    for the third fill the NaN values with the previous value in the column'''
-    data['group'] = data['group'].ffill()
-    data['training_time'] = data['training_time'].fillna('1:00')
-    data['date'] = data['date'].ffill()    
-    #delete all ending spaces from all the columns
-    data = data.apply(lambda x: x.str.strip() if x.dtype == "object" else x)
-    #change the data in the date column from a string to a datetime object
-    data['date'] = pd.to_datetime(data['date'])
-    #fill the NaN values in the weight column with 80
-    data['weight'] = data['weight'].fillna('80')
-    #replace all the values in the weight column that are body with 80
-    data['weight'] = data['weight'].replace('body', '80')
-    #replace all nan values in reps with 1 
-    data['reps'] = data['reps'].fillna('1')
-    #change the data in the weight column from a string where the seperator is '-' to a list of strings
-    data['weight'] = data['weight'].apply(lambda x: x.split('-'))
-    #change the data in the reps column from a string where the seperator is '-' to a list of strings
-    data['reps'] = data['reps'].apply(lambda x: x.split('-'))
-    #replace all values in the reps column with the result of the expression given in the string 
-    for i in range(len(data)):
-        for j in range(len(data['reps'][i])):
-            data['reps'][i][j] = eval(data['reps'][i][j])
-    return data
+    def read_data(self) -> pd.DataFrame:
+        data = pd.read_excel(self.file_path, sheet_name=self.sheet_name, dtype=str)
+        columns = ['group', 'training_time', 'date', 'exercise', 'variation', 'weight', 'reps', 'total_time', 'distance', 'speed', 'slope', 'notes']
+        data.columns = columns
+        return data
 
-# function to plot the time trend of the total time spent on a 3k run 
-def plot_time_trend_run(data:pd.DataFrame, distance:str = 3)->list:
-    # plot the time needed for the excercise run for 3km
-    run_data = data.loc[data['excercise'] == 'Run']
-    run_data = run_data.loc[run_data['distance'] == distance]
-    # plot the data with the x axis spaced per day and the y axis the total time format x axis to only show day and month
-    #Change total time from MM:SS to minutes
-    run_data['total_time'] = run_data['total_time'].apply(lambda x: int(x.split(':')[0]) + int(x.split(':')[1])/60)
-    fig, ax = plt.subplots()
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%b-%d'))
-    plt.plot(run_data['date'], run_data['total_time'], 'r-')
-    plt.xlabel('Date')
-    plt.ylabel('Total time (min)')
-    plt.title('Total time spent running for 3km')
-    plt.xticks(rotation=45)
-    plt.show()
-    return fig, ax
+    def clean_data(self, data: pd.DataFrame) -> pd.DataFrame:
+        # Forward fill the 'group' and 'date' columns to handle missing values
+        data['group'] = data['group'].ffill()
+        data['date'] = pd.to_datetime(data['date'].ffill())
+
+        # Fill NaN values in 'training_time' with '1:00'
+        data['training_time'] = data['training_time'].fillna('1:00')
+
+        # Strip whitespace from all string columns
+        data = data.apply(lambda x: x.str.strip() if x.dtype == "object" else x)
+
+        # Fill NaN values in 'weight' with '80' and replace 'body' with '80'
+        data['weight'] = data['weight'].fillna('80').replace('body', '80')
+        
+        # Fill NaN values in 'reps' with '1'
+        data['reps'] = data['reps'].fillna('0')
+        
+        # Split 'weight' and 'reps' columns by '-' and convert to lists
+        data['weight'] = data['weight'].apply(lambda x: list(map(float, x.split('-'))))
+        data['reps'] = data['reps'].apply(lambda x: list(map(eval, x.split('-'))))        
 
 
 
-# function to get the data for the weight trend of an excercise
-def weight_trend_data(data:pd.DataFrame, excercise: str)->pd.DataFrame:
-    '''returns the data for the weight trend of the excercise'''
-    #check if the list of weight values is the same length as the list of reps values
-    if len(data.loc[data['excercise'] == excercise].explode('weight')['weight']) != \
-        len(data.loc[data['excercise'] == excercise].explode('reps')['reps']):
-        logging.error('The length of the weight list is not the same as the length of the reps list')
-        #find the date where the length of the weight list is not the same as the length of the reps list
-        for i in range(len(data.loc[data['excercise'] == excercise])):
-            if len(data.loc[data['excercise'] == excercise].iloc[i]['weight']) != \
-                len(data.loc[data['excercise'] == excercise].iloc[i]['reps']):
-                logging.error(f'The error is at index {i} on date {data.loc[data["excercise"] == excercise].iloc[i]["date"]}')
-        raise ValueError('The length of the weight list is not the same as the length of the reps list')
+        return data
 
-    excercise_data = data.loc[data['excercise'] == excercise]
-    excercise_data1  = excercise_data.copy()
-    excercise_data = excercise_data.explode('weight')
-    #if the data in the weight column is a list create a new row for each value in the list
-    weight_explode = excercise_data1.explode('weight')['weight']
-    reps_explode = excercise_data1.explode('reps')['reps']
-    excercise_data['reps'] = reps_explode
-    #change the data in the weight column from a string to a float
-    excercise_data['weight'] = excercise_data['weight'].astype(float)
-    #change the data in the reps column from a string to a float
-    excercise_data['reps'] = excercise_data['reps'].astype(float)
+    
 
-    return excercise_data
 
-def plot_weight_trend(data:pd.DataFrame, excercise: str, show = False )-> list: 
-    excercise_data = weight_trend_data(data, excercise)
-    #plot the data with the x axis spaced per day and the y axis the weight format x axis to only show day and month
-    #Change to the marker color relative to the reps value and the size of the marker relative to the reps value
-    fig, ax = plt.subplots()
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%b-%d'))
-    plt.scatter(excercise_data['date'], excercise_data['weight'],
-                 s=excercise_data['reps']*10, c=excercise_data['reps'], 
-                 cmap='rainbow', alpha=0.5)
-    plt.xlabel('Date')
-    plt.ylabel('Weight (kg)')
-    plt.colorbar(label='Reps')
-    plt.title(f'Weight trend of the excercise {excercise}')
-    plt.xticks(rotation=45)
-    if show == True:
-        plt.show()
-    return fig, ax 
+class ExerciseAnalysis:
+    def __init__(self, data: pd.DataFrame) -> None:
+        self.data = data
 
-def unique_excercise_data(data:pd.DataFrame)->pd.DataFrame:
-    #new data frame containing all the data for the unique excercises
-    unique_excercises = data['excercise'].unique()
-    unique_excercises = [excercise for excercise in unique_excercises if excercise not in ['Run', 'Walk', 'Mountain walk','Stretch']]
-    unique_excercise_data = pd.DataFrame()
-    unique_excercise_data['excercise'] = unique_excercises
+    def weight_trend_data(self, exercise: str) -> pd.DataFrame:
+        exercise_data = self.data.loc[self.data['exercise'] == exercise]
+        exercise_data1 = exercise_data.copy()
+        exercise_data = exercise_data.explode('weight')
+        reps_explode = exercise_data1.explode('reps')['reps']
+        exercise_data['reps'] = reps_explode
+        exercise_data['weight'] = exercise_data['weight'].astype(float)
+        exercise_data['reps'] = exercise_data['reps'].astype(float)
+        return exercise_data
 
-    #count the number of times each excercise is done 
-    for excercise in unique_excercises:
-        unique_excercise_data.loc[unique_excercise_data['excercise'] == excercise, 'count'] \
-            = len(data.loc[data['excercise'] == excercise])
+    def plot_weight_trend(self, exercise: str, show: bool = False) -> Tuple[plt.Figure, plt.Axes]:
+        exercise_data = self.weight_trend_data(exercise)
+        fig, ax = plt.subplots()
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%b-%d'))
+        plt.scatter(exercise_data['date'], exercise_data['weight'], s=exercise_data['reps']*10, c=exercise_data['reps'], cmap='rainbow', alpha=0.5)
+        plt.xlabel('Date')
+        plt.ylabel('Weight (kg)')
+        plt.colorbar(label='Reps')
+        plt.title(f'Weight trend of the exercise {exercise}')
+        plt.xticks(rotation=45)
+        if show:
+            plt.show()
+        return fig, ax
 
-    #for each excercise add the max weight 
-    for excercise in unique_excercises:
-        try: 
-            excercise_data = weight_trend_data(data, excercise)
-            max_weight = excercise_data['weight'].max()
-            unique_excercise_data.loc[unique_excercise_data['excercise'] == excercise, 'max_weight'] = max_weight
-            unique_excercise_data.loc[unique_excercise_data['excercise'] == excercise, 'max_weight_reps'] = \
-                excercise_data.loc[excercise_data['weight'] == max_weight, 'reps'].values[0]
-        except:
-            pass
+    def unique_exercise_data(self) -> pd.DataFrame:
+        unique_exercises = self.data['exercise'].unique()
+        unique_exercises = [exercise for exercise in unique_exercises if exercise not in ['Run', 'Walk', 'Mountain walk', 'Stretch']]
+        unique_exercise_data = pd.DataFrame()
+        unique_exercise_data['exercise'] = unique_exercises
 
-    return unique_excercise_data
+        for exercise in unique_exercises:
+            unique_exercise_data.loc[unique_exercise_data['exercise'] == exercise, 'count'] = \
+                len(self.data.loc[self.data['exercise'] == exercise])
+        
+        for exercise in unique_exercises:
+            try:
+                exercise_data = self.weight_trend_data(exercise)
+                max_weight = exercise_data['weight'].max()
+                unique_exercise_data.loc[unique_exercise_data['exercise'] == exercise, 'max_weight'] = max_weight
+                unique_exercise_data.loc[unique_exercise_data['exercise'] == exercise, 'max_weight_reps'] =\
+                      exercise_data.loc[exercise_data['weight'] == max_weight, 'reps'].values[0]
+            except:
+                pass
 
-def unique_running_data(data: pd.DataFrame) -> pd.DataFrame:
-    '''returns the unique running data for the excercise run'''
-    running_data = data.loc[data['excercise'] == 'Run']
-    unique_running_data = pd.DataFrame()
-    unique_running_data['distance'] = running_data['distance'].unique()
-    unique_running_data['count'] = unique_running_data['distance'].apply(lambda x: len(running_data.loc[running_data['distance'] == x]))
-    unique_running_data['Fastest time'] = unique_running_data['distance'].apply(lambda x: running_data.loc[running_data['distance'] == x, 'total_time'].min())
-    for distance in unique_running_data['distance']:
-        unique_running_data[str(distance), 'Fastest time'] = running_data.loc[str(distance), 'total_time']/ \
-            running_data.loc[str(distance), 'distance'] 
-    return unique_running_data
+        return unique_exercise_data
 
-#%% read the data and clean the data
+class RunAnalysis:
+    def __init__(self, data: pd.DataFrame) -> None:
+        self.data = data
+
+
+    def running_data(self) -> pd.DataFrame:
+        # Find all Run exercises in the data
+        running_data = self.data.loc[self.data['exercise'] == 'Run'].copy()
+
+        # Change the format of the total time 
+        running_data.loc[:, 'total_time'] = running_data['total_time'].astype(str)
+
+        # Convert 'total_time' from MM:ss to seconds
+        running_data.loc[:, 'total_time_delta'] = running_data['total_time'].apply(
+            lambda x: int(x.split(':')[0]) * 60 + int(x.split(':')[1]) if x != 'nan' else 0
+        )
+
+        # Convert 'total_time_delta from seconds to delta time 
+        running_data.loc[:, 'total_time_delta'] = running_data['total_time_delta'].apply(
+            lambda x: pd.to_timedelta(x, unit='s')
+        )
+
+            # Calculate speed and distance based on available data
+        for k, v in running_data.loc[:, ['date', 'total_time_delta', 'distance', 'speed']].iterrows():
+            if v['total_time_delta'] != pd.Timedelta(seconds=0) and pd.notnull(v['distance']):
+                running_data.loc[k, 'speed'] = float(v['distance']) / (v['total_time_delta'].seconds / 3600)
+            elif v['total_time_delta'] != pd.Timedelta(seconds=0) and pd.notnull(v['speed']):
+                pass # speed is already calculated
+            #     # Ensure 'v['speed']' is treated as a float
+            #     speed_as_float = float(v['speed'])
+            #     running_data.loc[k, 'distance'] = speed_as_float * (v['total_time_delta'].seconds / 3600)   
+            elif pd.notnull(v['distance']) and pd.notnull(v['speed']):
+                running_data.loc[k, 'total_time_delta'] = pd.Timedelta(seconds=(v['distance'] / v['speed']) * 3600)
+            else:
+                logging.warning(f"Row {k} has missing values for 'total_time_delta', 'distance', and 'speed'")
+
+            # Calculate pace for each row
+            total_seconds = running_data['total_time_delta'].dt.total_seconds()
+            running_data['distance_float'] = running_data['distance'].astype(float)
+            valid_times = total_seconds != 0
+            running_data.loc[valid_times, 'pace'] = (total_seconds[valid_times] / 60) / running_data.loc[valid_times, 'distance_float']
+        return running_data
+
+    def unique_running_data(self) -> pd.DataFrame:
+        running_data = self.running_data()
+        unique_running_data = pd.DataFrame()
+        unique_running_data['distance'] = running_data['distance'].unique()
+        # delete NaN values
+        unique_running_data = unique_running_data.dropna()
+        unique_running_data['count'] = unique_running_data['distance'].apply(
+            lambda x: len(running_data.loc[running_data['distance'] == x])
+        )
+        # add the min pace for each distance
+        for distance in unique_running_data['distance'] :
+                unique_running_data.loc[unique_running_data['distance'] == distance, 'min_pace'] = \
+                    running_data.loc[running_data['distance'] == distance, 'pace'].min()
+        return unique_running_data
+  
+    def plot_pace_trend(self, distance: str = '3') -> Tuple[plt.Figure, plt.Axes]:
+        run_data = self.running_data()
+        run_data = run_data.loc[run_data['distance'] == distance]
+        fig, ax = plt.subplots()
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%b-%d'))
+        plt.plot(run_data['date'], run_data['pace'], 'r-', marker='o')
+        plt.xlabel('Date')
+        plt.ylabel('Total time (min)')
+        plt.title('Total time spent running for 3km')
+        plt.xticks(rotation=45)
+        return fig, ax
+
+#%%
 if __name__ == "__main__":
-    data = read_data()
-    data = clean_data(data)
-    unique_excercise_data = unique_excercise_data(data)
+    # Load and clean the data
+    loader = DataLoader(r"C:\Users\User\Documents\Version2\Data.xlsx", 'Sports')
+    data = loader.read_data()
+    cleaned_data = loader.clean_data(data)
+
+    # Perform run analysis
+    run_analysis = RunAnalysis(cleaned_data)
+    unique_running_data = run_analysis.unique_running_data()
+    print(unique_running_data)   
 
 
 # %%
