@@ -1,12 +1,8 @@
 """streamlit app for the sports data visualisation"""
 import streamlit as st
+import pandas as pd
 st.set_page_config(layout="wide")
 st.set_option('deprecation.showPyplotGlobalUse', False)
-import pandas as pd
-import matplotlib.pyplot as plt
-import logging
-
-logging.basicConfig(level=logging.INFO)
 
 #Use main.py functions in app.py
 from main import DataLoader, ExerciseAnalysis, RunAnalysis
@@ -35,17 +31,19 @@ if  __name__ == '__main__':
         st.title('Running analysis')
         # multiselect widget to select the length of the run 
         st.header('Select the length of the run for which you want to see the time trend')
-        distances= st.multiselect('Select the length of the run', cleaned_data['distance'].unique(), default = ['3']) 
-        if type(distances) == str:
+        selectbox_options = cleaned_data['distance'].unique()
+        selectbox_options = selectbox_options[~pd.isnull(selectbox_options)]
+        selectbox_options = ['Select all'] + selectbox_options.tolist()
+        distances= st.selectbox('Select the length of the run', selectbox_options, index=1) 
+        if distances == 'Select all':
+            #plot the time trend for the excercise 'Run' for the distance selected by the user
+            fig1 , ax1  = running_data.plot_pace_trend(distances)
+            ax1.set_title(f'Pace trend for the excercise Run for {distances} km')
+            st.pyplot(fig1)
+        else:
             #plot the time trend for the excercise 'Run' for the distance selected by the user
             fig1 , ax1  = running_data.plot_pace_trend(distances)
             st.pyplot(fig1)
-        else:
-            for distance in distances:
-                #plot the time trend for the excercise 'Run' for the distance selected by the user
-                fig1 , ax1  = running_data.plot_pace_trend(distance)
-                ax1.set_title(f'Time trend for the excercise Run for {distance} km')
-                st.pyplot(fig1)
     
         
 

@@ -68,12 +68,13 @@ class ExerciseAnalysis:
         exercise_data = self.weight_trend_data(exercise)
         fig, ax = plt.subplots()
         ax.xaxis.set_major_formatter(mdates.DateFormatter('%b-%d'))
-        plt.scatter(exercise_data['date'], exercise_data['weight'], s=exercise_data['reps']*10, c=exercise_data['reps'], cmap='rainbow', alpha=0.5)
-        plt.xlabel('Date')
-        plt.ylabel('Weight (kg)')
-        plt.colorbar(label='Reps')
-        plt.title(f'Weight trend of the exercise {exercise}')
-        plt.xticks(rotation=45)
+        ax.scatter(exercise_data['date'], exercise_data['weight'], s=exercise_data['reps']*10, c=exercise_data['reps'], cmap='rainbow', alpha=0.5)
+        ax.set_xlabel('Date')
+        ax.set_ylabel('Weight (kg)')
+        colorbar = plt.colorbar(ax.collections[0])
+        colorbar.set_label('Reps')
+        ax.set_title(f'Weight trend of the exercise {exercise}')
+        ax.set_xticklabels(ax.get_xticks(), rotation=45)
         if show:
             plt.show()
         return fig, ax
@@ -108,24 +109,20 @@ class RunAnalysis:
     def running_data(self) -> pd.DataFrame:
         # Find all Run exercises in the data
         running_data = self.data.loc[self.data['exercise'] == 'Run'].copy()
-
         # Change the format of the total time 
         running_data.loc[:, 'total_time'] = running_data['total_time'].astype(str)
-
         # Convert 'total_time' from MM:ss to seconds
+        if 'total_time_delta' not in running_data.columns:
+            running_data['total_time_delta'] = pd.Series(dtype='timedelta64[ns]')       
         running_data.loc[:, 'total_time_delta'] = running_data['total_time'].apply(
             lambda x: int(x.split(':')[0]) * 60 + int(x.split(':')[1]) if x != 'nan' else 0
         )
-
-        # Convert 'total_time_delta from seconds to delta time 
-        running_data.loc[:, 'total_time_delta'] = running_data['total_time_delta'].apply(
-            lambda x: pd.to_timedelta(x, unit='s')
-        )
-
+        # Ensure 'total_time_delta' column is of type 'timedelta64[ns]' before assignment
+        running_data.loc[:, 'total_time_delta'] = pd.to_timedelta(running_data['total_time_delta'], unit='s')
             # Calculate speed and distance based on available data
         for k, v in running_data.loc[:, ['date', 'total_time_delta', 'distance', 'speed']].iterrows():
             if v['total_time_delta'] != pd.Timedelta(seconds=0) and pd.notnull(v['distance']):
-                running_data.loc[k, 'speed'] = float(v['distance']) / (v['total_time_delta'].seconds / 3600)
+                running_data.loc[k, 'speed'] = float(v['distance']) / (float(v['total_time_delta'].seconds) / 3600)
             elif v['total_time_delta'] != pd.Timedelta(seconds=0) and pd.notnull(v['speed']):
                 pass # speed is already calculated
             #     # Ensure 'v['speed']' is treated as a float
@@ -163,11 +160,11 @@ class RunAnalysis:
         run_data = run_data.loc[run_data['distance'] == distance]
         fig, ax = plt.subplots()
         ax.xaxis.set_major_formatter(mdates.DateFormatter('%b-%d'))
-        plt.plot(run_data['date'], run_data['pace'], 'r-', marker='o')
-        plt.xlabel('Date')
-        plt.ylabel('Total time (min)')
-        plt.title('Total time spent running for 3km')
-        plt.xticks(rotation=45)
+        ax.plot(run_data['date'], run_data['pace'], 'r-', marker='o')
+        ax.set_xlabel('Date')
+        ax.set_ylabel('Total time (min)')
+        ax.set_title('Total time spent running for 3km')
+        ax.tick_params(axis='x', rotation=45)
         return fig, ax
 
 #%%
