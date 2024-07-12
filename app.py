@@ -5,7 +5,6 @@ st.set_option('deprecation.showPyplotGlobalUse', False)
 import pandas as pd
 import matplotlib.pyplot as plt
 import logging
-import regex as re
 
 logging.basicConfig(level=logging.INFO)
 
