@@ -308,10 +308,5 @@ if __name__ == "__main__":
     data = loader.read_data()
     cleaned_data = loader.clean_data(data)
 
-    # Group data|
-    exercise_analysis = ExerciseAnalysis(cleaned_data)
-    group_exercise_data = exercise_analysis.group_exercise_data()
-    print(group_exercise_data)
-
 
 # %%

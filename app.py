@@ -22,6 +22,7 @@ if  __name__ == '__main__':
     # Perform exercise analysis
     exercise_analysis = ExerciseAnalysis(cleaned_data)
 
+    
 
     col1 ,col2 = st.columns(2)
     with col1:
