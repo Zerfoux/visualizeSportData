@@ -23,10 +23,6 @@ if  __name__ == '__main__':
     #Create a widget to display the weight trend for the excercise which the user inputs
     st.title('Sports data visualisation')    
 
-
-
-
-
     col1 ,col2 = st.columns(2)
     with col1:
         st.title('Running analysis')

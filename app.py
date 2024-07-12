@@ -16,7 +16,7 @@ if  __name__ == '__main__':
     
 
     # Load and clean the data
-    loader = DataLoader(r"C:\Users\User\Documents\Version2\Data.xlsx", 'Sports')
+    loader = DataLoader('Sports')
     data = loader.read_data()
     cleaned_data = loader.clean_data(data)
 

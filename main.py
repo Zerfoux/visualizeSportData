@@ -11,12 +11,16 @@ plt.style.use('bmh')
 logging.basicConfig(level=logging.INFO)
 
 class DataLoader:
-    def __init__(self, file_path: str, sheet_name: str) -> None:
-        self.file_path = file_path
+    def __init__(self, sheet_name: str) -> None:
         self.sheet_name = sheet_name
 
+    def update_data(self, file_path, sheet_name: str) -> None:
+        data = pd.read_excel(file_path, sheet_name=self.sheet_name, dtype=str)
+        # Save the data in specific location
+        data.to_excel('data.xlsx',sheet_name=sheet_name, index=False)
+
     def read_data(self) -> pd.DataFrame:
-        data = pd.read_excel(self.file_path, sheet_name=self.sheet_name, dtype=str)
+        data = pd.read_excel('data.xlsx', sheet_name=self.sheet_name, dtype=str)
         columns = ['group', 'training_time', 'date', 'exercise', 'variation', 'weight', 'reps', 'total_time', 'distance', 'speed', 'slope', 'notes']
         data.columns = columns
         return data
@@ -41,9 +45,6 @@ class DataLoader:
         # Split 'weight' and 'reps' columns by '-' and convert to lists
         data['weight'] = data['weight'].apply(lambda x: list(map(float, x.split('-'))))
         data['reps'] = data['reps'].apply(lambda x: list(map(eval, x.split('-'))))        
-
-
-
         return data
 
     
@@ -172,7 +173,9 @@ class RunAnalysis:
 #%%
 if __name__ == "__main__":
     # Load and clean the data
-    loader = DataLoader(r"C:\Users\User\Documents\Version2\Data.xlsx", 'Sports')
+    loader = DataLoader('Sports')
+    # loader.update_data(r"C:\Users\User\Documents\Version2\Data.xlsx", 'Sports')
+
     data = loader.read_data()
     cleaned_data = loader.clean_data(data)
 
