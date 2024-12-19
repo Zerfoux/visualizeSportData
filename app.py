@@ -2,14 +2,12 @@
 import streamlit as st
 import pandas as pd
 st.set_page_config(layout="wide")
-st.set_option('deprecation.showPyplotGlobalUse', False)
+# st.set_option('deprecation.showPyplotGlobalUse', False)
 
 #Use main.py functions in app.py
 from main import DataLoader, ExerciseAnalysis, RunAnalysis
 
 if  __name__ == '__main__':
-    
-
     # Load and clean the data
     loader = DataLoader('Sports')
     data = loader.read_data()
@@ -44,11 +42,11 @@ if  __name__ == '__main__':
             distances = unique_running_data['Distance (km)'].astype(str).tolist()
             fig1 , ax1  = running_data.plot_pace_trend(distances)
             ax1.set_title(f'Pace trend for the exercise Run for distances') 
-            st.pyplot(fig1)
+            st.pyplot(fig1, use_container_width=True)
         else:
             #plot the time trend for the exercise 'Run' for the distance selected by the user
             fig1 , ax1  = running_data.plot_pace_trend(distances)
-            st.pyplot(fig1)
+            st.pyplot(fig1, use_container_width=True)
     
         
 
@@ -92,7 +90,7 @@ if  __name__ == '__main__':
 
             #plot the weight trend for the exercise
             fig , ax = exercise_analysis.plot_weight_trend(exercise)
-            st.pyplot(fig)
+            st.pyplot(fig, use_container_width=True)
 
 
 

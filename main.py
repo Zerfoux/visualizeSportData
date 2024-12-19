@@ -22,7 +22,7 @@ import matplotlib.pyplot as plt
 import logging
 import matplotlib.dates as mdates
 from typing import Tuple, List, Union
-
+import os
 
 logging.basicConfig(level=logging.INFO)
 
@@ -33,7 +33,14 @@ class DataLoader:
     def update_data(self, file_path, sheet_name: str) -> None:
         data = pd.read_excel(file_path, sheet_name=self.sheet_name, dtype=str)
         # Save the data in specific location
-        data.to_excel('data.xlsx',sheet_name=sheet_name, index=False)
+        # Check if the file is accessible
+        if os.access(file_path, os.W_OK):
+            data.to_excel(file_path, sheet_name='Sports', index=False)
+        else:
+            print(f"Cannot write to {file_path}. Check file permissions or if the file is open elsewhere.")
+
+
+        
 
     def read_data(self) -> pd.DataFrame:
         data = pd.read_excel('data.xlsx', sheet_name=self.sheet_name, dtype=str)
@@ -304,7 +311,7 @@ class RunAnalysis:
 if __name__ == "__main__":
     # Load and clean the data
     loader = DataLoader('Sports')
-    loader.update_data(r"C:\Users\User\Documents\Version2\Data.xlsx", 'Sports')
+    loader.update_data(r"C:\Users\User\Documenten\Version2\Data.xlsx", 'Sports')
     data = loader.read_data()
     cleaned_data = loader.clean_data(data)
 
